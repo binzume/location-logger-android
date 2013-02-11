@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.PendingIntent;
 import android.content.Intent;
@@ -24,10 +25,11 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 	public static final String ACTION_START = "net.binzume.android.location_logger.start";
 	public static final String ACTION_STOP = "net.binzume.android.location_logger.stop";
 	public static final String ACTION_TIMER = "net.binzume.android.location_logger.timer";
+	public static final String ACTION_LOCATION = "net.binzume.android.location_logger.location";
 
 	private static final String LOG_FILE = "location.log";
 
-	private static final long INTERVAL_MILLISEC = 5L * 60 * 1000;
+	private static final long INTERVAL_MILLISEC = 10L * 60 * 1000;
 
 	public GPSLoggerService() {
 		super("gps_logger");
@@ -40,20 +42,27 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 		Log.d("GPSLoggerService", "onHandleIntent a:" + intent.getAction());
 		LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-		if (ACTION_START.equals(intent.getAction())) {
+		if (ACTION_START.equals(intent.getAction()) || ACTION_TIMER.equals(intent.getAction())) {
 			writeLog("start");
 			Intent i = new Intent(getApplicationContext(), GPSLoggerService.class);
-			i.setAction(ACTION_TIMER);
+			i.setAction(ACTION_LOCATION);
 			PendingIntent pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
 
 			locationManager.removeUpdates(pendignIntent);
 			locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, INTERVAL_MILLISEC, 1000, pendignIntent);
 			locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, INTERVAL_MILLISEC, 1000, pendignIntent);
 
-			//AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-			//am.cancel(pendignIntent);
-			//am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + INTERVAL_MILLISEC, pendignIntent);
-		} else if (ACTION_TIMER.equals(intent.getAction())) {
+			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+			i.setAction(ACTION_TIMER);
+			am.cancel(pendignIntent);
+			am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + INTERVAL_MILLISEC, pendignIntent);
+		} else if (ACTION_LOCATION.equals(intent.getAction())) {
+			Intent i = new Intent(getApplicationContext(), GPSLoggerService.class);
+			i.setAction(ACTION_LOCATION);
+			PendingIntent pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
+
+			locationManager.removeUpdates(pendignIntent);
+
 			Location location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 			if (location != null) {
 				writeLog(location);
@@ -65,12 +74,14 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 		} else if (ACTION_STOP.equals(intent.getAction())) {
 			writeLog("stop");
 			Intent i = new Intent(getApplicationContext(), GPSLoggerService.class);
-			i.setAction(ACTION_TIMER);
+			i.setAction(ACTION_LOCATION);
 			PendingIntent pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
 
 			locationManager.removeUpdates(pendignIntent);
-			//AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-			//am.cancel(pendignIntent);
+
+			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+			i.setAction(ACTION_TIMER);
+			am.cancel(pendignIntent);
 		}
 
 	}
