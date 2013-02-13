@@ -28,8 +28,9 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 	public static final String ACTION_LOCATION = "net.binzume.android.location_logger.location";
 
 	private static final String LOG_FILE = "location.log";
+	private static final String LOG_FILE2 = "location_ll.log";
 
-	private static final long INTERVAL_MILLISEC = 10L * 60 * 1000;
+	private static final long INTERVAL_MILLISEC = 5L * 60 * 1000;
 
 	public GPSLoggerService() {
 		super("gps_logger");
@@ -43,17 +44,19 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 		LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
 		if (ACTION_START.equals(intent.getAction()) || ACTION_TIMER.equals(intent.getAction())) {
-			writeLog("start");
+			writeLog(LOG_FILE, "start");
 			Intent i = new Intent(getApplicationContext(), GPSLoggerService.class);
 			i.setAction(ACTION_LOCATION);
 			PendingIntent pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
 
 			locationManager.removeUpdates(pendignIntent);
-			locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, INTERVAL_MILLISEC, 1000, pendignIntent);
-			locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, INTERVAL_MILLISEC, 1000, pendignIntent);
+			locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, INTERVAL_MILLISEC, 1000,
+					pendignIntent);
+			// locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, INTERVAL_MILLISEC, 1000, pendignIntent);
 
 			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
 			i.setAction(ACTION_TIMER);
+			pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
 			am.cancel(pendignIntent);
 			am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + INTERVAL_MILLISEC, pendignIntent);
 		} else if (ACTION_LOCATION.equals(intent.getAction())) {
@@ -72,7 +75,7 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 				writeLog(location);
 			}
 		} else if (ACTION_STOP.equals(intent.getAction())) {
-			writeLog("stop");
+			writeLog(LOG_FILE, "stop");
 			Intent i = new Intent(getApplicationContext(), GPSLoggerService.class);
 			i.setAction(ACTION_LOCATION);
 			PendingIntent pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
@@ -81,20 +84,24 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 
 			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
 			i.setAction(ACTION_TIMER);
+			pendignIntent = PendingIntent.getService(getApplicationContext(), 0, i, 0);
 			am.cancel(pendignIntent);
 		}
 
 	}
 
 	private void writeLog(Location location) {
-		writeLog("" + location.getProvider() + ": " + location.getTime() + "," + location.getLatitude() + "," + location.getLongitude() + ","
-				+ location.getAltitude());
+		writeLog(LOG_FILE, "" + location.getProvider() + ": " + location.getTime() + "," + location.getLatitude() + ","
+				+ location.getLongitude() + "," + location.getAltitude());
+		writeLog(LOG_FILE2,
+				"" + location.getLatitude() + "\t" + location.getLongitude() + "\t" + location.getAltitude() + "\t"
+						+ location.getAccuracy());
 	}
 
-	private void writeLog(String log) {
+	private void writeLog(String file, String log) {
 		Log.d("GPSLoggerService", "writeLog:" + log);
 
-		File f = new File(Environment.getExternalStorageDirectory() + "/" + LOG_FILE);
+		File f = new File(Environment.getExternalStorageDirectory() + "/" + file);
 		try {
 			FileWriter filewriter = new FileWriter(f, true);
 			filewriter.write(log + "\n");
@@ -105,7 +112,7 @@ public class GPSLoggerService extends IntentService implements LocationListener 
 	}
 
 	public void onLocationChanged(Location location) {
-		//writeLog(location);
+		// writeLog(location);
 
 	}
 
